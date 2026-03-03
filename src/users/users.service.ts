@@ -1,30 +1,49 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
-import { QueryFailedError, Repository } from 'typeorm';
+import { DataSource, QueryFailedError, Repository } from 'typeorm';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ApiResponse } from './interfaces/api-response.interface';
 import { HTTP_STATUS, MESSAGES } from '../common/constants';
+import { AuditLog } from './entities/audit-log.entity';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
+    private dataSource: DataSource,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<ApiResponse<User>> {
     try {
-      const user = this.userRepository.create(createUserDto);
-      const savedUser = await this.userRepository.save(user);
-      return {
-        statusCode: HTTP_STATUS.CREATED,
-        message: MESSAGES.USER.CREATED,
-        data: savedUser,
-      };
+      return await this.dataSource.transaction(async (manager) => {
+        const user = manager.create(User, createUserDto);
+        const savedUser = await manager.save(user);
+
+        const auditLog = manager.create(AuditLog, {
+          action: 'USER_CREATED',
+          userId: savedUser.id,
+        });
+
+        await manager.save(auditLog);
+        // throw new Error('Force rollback test'); // rollback test -> agr koi failure aata h then auto rollback ho jayega user creation
+        return {
+          statusCode: HTTP_STATUS.CREATED,
+          message: MESSAGES.USER.CREATED,
+          data: savedUser,
+        };
+      });
     } catch (error) {
-      if (error instanceof QueryFailedError && (error as any).code === '23505') {
+      if (
+        error instanceof QueryFailedError &&
+        (error as any).code === '23505'
+      ) {
         throw new ConflictException(MESSAGES.USER.EMAIL_EXISTS);
       }
       throw error;
@@ -49,7 +68,10 @@ export class UsersService {
     };
   }
 
-  async update(id: string, updateUserDto: UpdateUserDto): Promise<ApiResponse<User>> {
+  async update(
+    id: string,
+    updateUserDto: UpdateUserDto,
+  ): Promise<ApiResponse<User>> {
     try {
       const user = await this.findUserById(id);
       Object.assign(user, updateUserDto);
@@ -60,7 +82,10 @@ export class UsersService {
         data: updatedUser,
       };
     } catch (error) {
-      if (error instanceof QueryFailedError && (error as any).code === '23505') {
+      if (
+        error instanceof QueryFailedError &&
+        (error as any).code === '23505'
+      ) {
         throw new ConflictException(MESSAGES.USER.EMAIL_EXISTS);
       }
       throw error;
