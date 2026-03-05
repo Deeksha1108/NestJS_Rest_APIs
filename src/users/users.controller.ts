@@ -18,25 +18,25 @@ import { ApiOperation, ApiTags } from '@nestjs/swagger';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @Post('create')
+  @Post()
   @ApiOperation({ summary: 'Create a new user' })
   create(@Body() createUserDto: CreateUserDto) {
     return this.usersService.create(createUserDto);
   }
 
-  @Get('get')
+  @Get()
   @ApiOperation({ summary: 'Get all users' })
   findAll() {
     return this.usersService.findAll();
   }
 
-  @Get('get/:id')
+  @Get(':id')
   @ApiOperation({ summary: 'Get user by ID' })
   findOne(@Param('id') id: string) {
     return this.usersService.findOne(id);
   }
 
-  @Put('put/:id')
+  @Put(':id')
   @ApiOperation({ summary: 'Replace user completely' })
   updateFull(
     @Param('id') id: string,
@@ -45,7 +45,7 @@ export class UsersController {
     return this.usersService.update(id, updateUserDto);
   }
 
-  @Patch('patch/:id')
+  @Patch(':id')
   @ApiOperation({ summary: 'Partially update user' })
   updatePartial(
     @Param('id') id: string,
@@ -54,7 +54,7 @@ export class UsersController {
     return this.usersService.update(id, updateUserDto);
   }
 
-  @Delete('delete/:id')
+  @Delete(':id')
   @ApiOperation({ summary: 'Delete user by ID' })
   remove(@Param('id') id: string) {
     return this.usersService.remove(id);

@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
@@ -25,6 +26,8 @@ async function bootstrap() {
   const port = configService.get<number>('PORT') || 3000;
 
   await app.listen(port);
-  console.log('Nest crud is running...');
+  
+  const logger = new Logger('Bootstrap');
+  logger.log(`Nest CRUD is running on port ${port}`);
 }
 bootstrap();
